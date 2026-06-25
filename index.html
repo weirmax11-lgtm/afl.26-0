@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Can you go 26-0?</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .afl-oval {
+            background-color: #1e5e2e;
+            border: 4px solid #ffffff;
+            border-radius: 50% / 40%;
+            aspect-ratio: 1 / 1.3;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.5);
+        }
+        .oval-line {
+            position: absolute;
+            border: 2px dashed rgba(255,255,255,0.35);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .position-node {
+            transition: all 0.2s ease-in-out;
+        }
+        .position-node.active {
+            background-color: #eab308;
+            color: #000000;
+            scale: 1.1;
+        }
+        @keyframes slot-spin {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-50%); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen antialiased">
+
+    <!-- 1. HOW TO PLAY MODAL POP-UP -->
+    <div id="welcome-modal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 border border-gray-700 max-w-lg w-full rounded-xl p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div class="text-center">
+                <h2 class="text-3xl font-extrabold text-yellow-500 tracking-tight">How to Play 26-0</h2>
+                <p class="text-gray-400 mt-1">Build the ultimate VFL/AFL all-time team and see if you can go 26-0!</p>
+            </div>
+            
+            <div class="space-y-4 text-sm divide-y divide-gray-700">
+                <div class="pt-3">
+                    <h3 class="font-bold text-base text-blue-400 mb-1">🎰 The Draft</h3>
+                    <p class="text-gray-300">Each round, spin to get a random VFL/AFL team and decade. Select one player or coach from that era to add to your list. Complete all 23 rounds to fill your lineup.</p>
+                </div>
+                <div class="pt-3">
+                    <h3 class="font-bold text-base text-blue-400 mb-1">🏉 Building Your Lineup</h3>
+                    <p class="text-gray-300">Fill all 18 positions, bench, and coach. Tap a player or coach to select, then choose their position.</p>
+                </div>
+                <div class="pt-3">
+                    <h3 class="font-bold text-base text-blue-400 mb-1">📊 Team Rating</h3>
+                    <p class="text-gray-300">Rated on Gls, Dis, Mks, Tks, HOs, and Br Votes — higher stats win more games. Missing stats from older eras are estimated fairly.</p>
+                </div>
+            </div>
+
+            <p class="text-center font-bold text-yellow-500 text-base pt-2">Aim for the perfect 26-0 season! Can you go 26-0?</p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-gray-700">
+                <label class="inline-flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
+                    <input type="checkbox" id="dont-show-again" class="rounded border-gray-600 bg-gray-700 text-yellow-500 focus:ring-0">
+                    <span>Don't show this again</span>
+                </label>
+                <button onclick="closeModal()" class="w-full sm:w-auto px-6 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-gray-950 font-bold rounded-lg transition shadow-md">
+                    Let's Draft
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN MENU / MODE SELECTION -->
+    <div id="main-menu" class="max-w-xl mx-auto px-4 py-16 text-center space-y-8">
+        <div class="space-y-2">
+            <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-500 tracking-tight">
+                Can you go 26-0?
+            </h1>
+            <p class="text-gray-400 text-lg">How do you want to build your all-time team?</p>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 pt-6">
+            <button onclick="startGame('classic')" class="p-6 bg-gray-800 hover:bg-gray-700 border-2 border-gray-700 hover:border-yellow-500 rounded-xl transition text-left space-y-2 group shadow-lg">
+                <h3 class="text-xl font-bold text-yellow-400 group-hover:text-yellow-300">Classic Mode</h3>
+                <p class="text-gray-400 text-sm">Stats visible</p>
+            </button>
+            <button onclick="startGame('iq')" class="p-6 bg-gray-800 hover:bg-gray-700 border-2 border-gray-700 hover:border-blue-500 rounded-xl transition text-left space-y-2 group shadow-lg">
+                <h3 class="text-xl font-bold text-blue-400 group-hover:text-blue-300">Footy IQ Mode</h3>
+                <p class="text-gray-400 text-sm">Stats hidden</p>
+            </button>
+        </div>
+    </div>
+
+    <!-- 3. MAIN GAME SCREEN -->
+    <div id="game-screen" class="max-w-7xl mx-auto px-4 py-6 hidden">
+        <div class="flex flex-col sm:flex-row justify-between items-center bg-gray-800 p-4 rounded-xl border border-gray-700 mb-6 shadow-md gap-4">
+            <div>
+                <span id="game-mode-badge" class="px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider"></span>
+                <h2 class="text-2xl font-bold mt-1">All-Time List Build</h2>
+            </div>
+            <div class="text-right">
+                <p class="text-sm text-gray-400">Draft Status</p>
+                <p class="text-xl font-black text-yellow-500"><span id="current-round">0</span> / 23 Filled</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- LEFT PANEL: Slot Spinners & Player Pool -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg space-y-4">
+                    <h3 class="text-xs uppercase tracking-widest text-gray-400 font-bold">Era Selection Engine</h3>
+                    
+                    <div class="grid grid-cols-2 gap-3 bg-gray-950 p-4 rounded-lg border border-gray-800 overflow-hidden text-center text-xl font-black tracking-wide h-16 items-center">
+                        <div id="slot-team" class="text-yellow-500">---</div>
+                        <div id="slot-era" class="text-blue-400">---</div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <button id="btn-spin" onclick="spinSlots()" class="col-span-3 py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-950 font-black rounded-lg transition uppercase tracking-wider shadow-md">
+                            🎰 Spin
+                        </button>
+                        <button id="btn-respin-team" onclick="respin('team')" disabled class="py-2 px-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:hover:bg-gray-700 text-xs font-bold rounded transition">
+                            🔄 Re-spin Team (1)
+                        </button>
+                        <button id="btn-respin-era" onclick="respin('era')" disabled class="py-2 px-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-30 disabled:hover:bg-gray-700 text-xs font-bold rounded transition">
+                            🔄 Re-spin Era (1)
+                        </button>
+                        <button onclick="resetGame()" class="py-2 px-1 bg-red-950/40 hover:bg-red-900/40 text-red-400 border border-red-900/50 text-xs font-bold rounded transition">
+                            Reset Build
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 shadow-lg flex flex-col max-h-[500px]">
+                    <h3 class="text-xs uppercase tracking-widest text-gray-400 font-bold mb-3">Available Signings</h3>
+                    <div id="player-pool-container" class="space-y-2 overflow-y-auto pr-1 flex-1 text-sm text-gray-400 italic">
+                        Spin the wheels to search for available players and coaches from that era.
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Visual Field Oval -->
+            <div class="lg:col-span-7 flex flex-col items-center">
+                <div class="w-full max-w-[550px] space-y-4">
+                    <div id="selection-status-bar" class="w-full bg-blue-950/40 border border-blue-900/60 rounded-lg p-3 text-center text-sm text-blue-300 font-medium">
+                        Step 1: Spin the draft engine to view available assets.
+                    </div>
+
+                    <!-- Visual AFL Oval Container mapping nodes directly inside a tactical layout -->
+                    <div class="afl-oval p-6 flex flex-col justify-between">
+                        <div class="oval-line inset-4"></div>
+                        <div class="oval-line inset-12"></div>
+                        <div class="oval-line inset-24"></div>
+
+                        <!-- Full Forward Line -->
+                        <div class="flex justify-around z-10">
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-LFP" onclick="assignToPosition('LFP')"><span>LFP</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-FF" onclick="assignToPosition('FF')"><span>FF</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-RFP" onclick="assignToPosition('RFP')"><span>RFP</span><small class="text-yellow-400 text-[8px]"></small></div>
+                        </div>
+
+                        <!-- Half Forward Line -->
+                        <div class="flex justify-around z-10 px-4">
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-LHF" onclick="assignToPosition('LHF')"><span>LHF</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-CHF" onclick="assignToPosition('CHF')"><span>CHF</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-RHF" onclick="assignToPosition('RHF')"><span>RHF</span><small class="text-yellow-400 text-[8px]"></small></div>
+                        </div>
+
+                        <!-- Center Line & In-Square Followers -->
+                        <div class="space-y-2 z-10">
+                            <div class="flex justify-between px-8">
+                                <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-LW" onclick="assignToPosition('LW')"><span>LW</span><small class="text-yellow-400 text-[8px]"></small></div>
+                                <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-C" onclick="assignToPosition('C')"><span>C</span><small class="text-yellow-400 text-[8px]"></small></div>
+                                <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-RW" onclick="assignToPosition('RW')"><span>RW</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            </div>
+                            <div class="flex justify-center gap-2">
+                                <div class="position-node w-11 h-11 bg-orange-950/90 border border-orange-400 text-[9px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-R" onclick="assignToPosition('R')"><span>R</span><small class="text-yellow-400 text-[8px]"></small></div>
+                                <div class="position-node w-11 h-11 bg-orange-950/90 border border-orange-400 text-[9px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-RR" onclick="assignToPosition('RR')"><span>RR</span><small class="text-yellow-400 text-[8px]"></small></div>
+                                <div class="position-node w-11 h-11 bg-orange-950/90 border border-orange-400 text-[9px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-RO" onclick="assignToPosition('RO')"><span>RO</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            </div>
+                        </div>
+
+                        <!-- Half Back Line -->
+                        <div class="flex justify-around z-10 px-4">
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-LHB" onclick="assignToPosition('LHB')"><span>LHB</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-CHB" onclick="assignToPosition('CHB')"><span>CHB</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-RHB" onclick="assignToPosition('RHB')"><span>RHB</span><small class="text-yellow-400 text-[8px]"></small></div>
+                        </div>
+
+                        <!-- Full Back Line -->
+                        <div class="flex justify-around z-10">
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-LBP" onclick="assignToPosition('LBP')"><span>LBP</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-FB" onclick="assignToPosition('FB')"><span>FB</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            <div class="position-node w-12 h-12 bg-gray-900/90 border border-white text-[10px] rounded-full flex flex-col items-center justify-center font-bold cursor-pointer shadow" id="pos-RBP" onclick="assignToPosition('RBP')"><span>RBP</span><small class="text-yellow-400 text-[8px]"></small></div>
+                        </div>
+                    </div>
+
+                    <!-- Bench & Coach Panel -->
+                    <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-lg space-y-3">
+                        <div class="flex justify-between items-center border-b border-gray-700 pb-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Interchange & Coaching Staff</span>
+                        </div>
+                        <div class="flex justify-between items-center gap-2">
+                            <div class="flex gap-2">
+                                <div class="position-node w-11 h-11 bg-gray-900 border border-dashed border-gray-500 text-[10px] rounded-lg flex flex-col items-center justify-center font-bold cursor-pointer" id="pos-B1" onclick="assignToPosition('B1')"><span>B1</span><small class="text-yellow-400 text-[8px]"></small></div>
+                                <div class="position-node w-11 h-11 bg-gray-900 border border-dashed border-gray-500 text-[10px] rounded-lg flex flex-col items-center justify-center font-bold cursor-pointer" id="pos-B2" onclick="assignToPosition('B2')"><span>B2</span><small class="text-yellow-400 text-[8px]"></small></div>
+                                <div class="position-node w-11 h-11 bg-gray-900 border border-dashed border-gray-500 text-[10px] rounded-lg flex flex-col items-center justify-center font-bold cursor-pointer" id="pos-B3" onclick="assignToPosition('B3')"><span>B3</span><small class="text-yellow-400 text-[8px]"></small></div>
+                                <div class="position-node w-11 h-11 bg-gray-900 border border-dashed border-gray-500 text-[10px] rounded-lg flex flex-col items-center justify-center font-bold cursor-pointer" id="pos-B4" onclick="assignToPosition('B4')"><span>B4</span><small class="text-yellow-400 text-[8px]"></small></div>
+                            </div>
+                            <div class="position-node w-16 h-11 bg-purple-950/80 border border-purple-500 text-[10px] rounded-lg flex flex-col items-center justify-center font-bold cursor-pointer" id="pos-Coach" onclick="assignToPosition('Coach')"><span>COACH</span><small class="text-purple-300 text-[8px]"></small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TEAMS = ["Adelaide", "Brisbane", "Carlton", "Collingwood", "Essendon", "Fremantle", "Geelong", "Gold Coast", "GWS", "Hawthorn", "Melbourne", "North Melbourne", "Port Adelaide", "Richmond", "St Kilda", "Sydney", "West Coast", "Western Bulldogs", "Fitzroy", "South Melbourne"];
+        const DECADES = ["1960s", "1970s", "1980s", "1990s", "2000s", "2010s", "2020s"];
+        const REQUIRED_POSITIONS = ["LBP", "FB", "RBP", "LHB", "CHB", "RHB", "LW", "RW", "C", "RO", "RR", "R", "LHF", "CHF", "RHF", "LFP", "FF", "RFP", "B1", "B2", "B3", "B4", "Coach"];
+        const STANDARD_SEASON_GAMES = 22; // Denominator to transform seasonal totals to per-game targets cleanly
+
+        let gameMode = 'classic'; 
+        let currentTeam = "";
+        let currentEra = "";
+        let selectedPlayerAsset = null; 
+        let hasRespunTeam = false;
+        let hasRespunEra = false;
+        let lineUpState = {}; 
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (localStorage.getItem("hide260WelcomeModal") !== "true") {
+                document.getElementById("welcome-modal").classList.remove("hidden");
+            }
+        });
+
+        function closeModal() {
+            if (document.getElementById("dont-show-again").checked) {
+                localStorage.setItem("hide260WelcomeModal", "true");
+            }
+            document.getElementById("welcome-modal").classList.add("hidden");
+        }
+
+        function startGame(mode) {
+            gameMode = mode;
+            document.getElementById("main-menu").classList.add("hidden");
+            document.getElementById("game-screen").classList.remove("hidden");
+            
+            const badge = document.getElementById("game-mode-badge");
+            badge.innerText = mode === 'classic' ? 'Classic (Stats On)' : 'Footy IQ (Stats Hidden)';
+            badge.className = mode === 'classic' ? 'px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider bg-yellow-500 text-gray-950' : 'px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider bg-blue-600 text-white';
+            
+            resetGame();
+        }
+
+        function resetGame() {
+            lineUpState = {};
+            hasRespunTeam = false;
+            hasRespunEra = false;
+            selectedPlayerAsset = null;
+            currentTeam = "";
+            currentEra = "";
+            
+            document.getElementById("slot-team").innerText = "---";
+            document.getElementById("slot-era").innerText = "---";
+            document.getElementById("player-pool-container").innerHTML = `<p class="italic text-gray-500">Spin the engine to populate draft choices.</p>`;
+            document.getElementById("selection-status-bar").innerText = "Step 1: Spin the engine to view assets.";
+            document.getElementById("selection-status-bar").className = "w-full bg-blue-950/40 border border-blue-900/60 rounded-lg p-3 text-center text-sm text-blue-300 font-medium";
+
+            REQUIRED_POSITIONS.forEach(pos => {
+                const element = document.getElementById(`pos-${pos}`);
+                element.classList.remove('active');
+                element.querySelector('span').innerText = pos === 'Coach' ? 'COACH' : pos;
+                element.querySelector('small').innerText = "";
+            });
+
+            updateRoundTracker();
+            toggleActionButtons(true);
+        }
+
+        function updateRoundTracker() {
+            const filledCount = Object.keys(lineUpState).length;
+            document.getElementById("current-round").innerText = filledCount;
+            if (filledCount === 23) {
+                alert("Your 23-man list is fully committed! Simulating final ladder formulas...");
+            }
+        }
+
+        function toggleActionButtons(canSpin) {
+            document.getElementById("btn-spin").disabled = !canSpin;
+            document.getElementById("btn-respin-team").disabled = canSpin || hasRespunTeam;
+            document.getElementById("btn-respin-era").disabled = canSpin || hasRespunEra;
+        }
+
+        function spinSlots() {
+            selectedPlayerAsset = null;
+            document.getElementById("player-pool-container").innerHTML = `<div class="text-center py-4 text-yellow-500 font-medium">Drafting from historical files...</div>`;
+            
+            let ticks = 0;
+            const interval = setInterval(() => {
+                document.getElementById("slot-team").innerText = TEAMS[Math.floor(Math.random() * TEAMS.length)].toUpperCase().substring(0, 10);
+                document.getElementById("slot-era").innerText = DECADES[Math.floor(Math.random() * DECADES.length)];
+                ticks++;
+                if (ticks > 10) {
+                    clearInterval(interval);
+                    currentTeam = TEAMS[Math.floor(Math.random() * TEAMS.length)];
+                    currentEra = DECADES[Math.floor(Math.random() * DECADES.length)];
+                    
+                    document.getElementById("slot-team").innerText = currentTeam.toUpperCase();
+                    document.getElementById("slot-era").innerText = currentEra;
+                    
+                    toggleActionButtons(false);
+                    fetchAndAggregatePoolData();
+                }
+            }, 100);
+        }
+
+        function respin(type) {
+            if (type === 'team') {
+                hasRespunTeam = true;
+                currentTeam = TEAMS[Math.floor(Math.random() * TEAMS.length)];
+                document.getElementById("slot-team").innerText = currentTeam.toUpperCase();
+            } else {
+                hasRespunEra = true;
+                currentEra = DECADES[Math.floor(Math.random() * DECADES.length)];
+                document.getElementById("slot-era").innerText = currentEra;
+            }
+            document.getElementById(`btn-respin-${type}`).disabled = true;
+            fetchAndAggregatePoolData();
+        }
+
+        async function fetchAndAggregatePoolData() {
+            try {
+                const dataUrl = `./${currentEra}.json`;
+                const coachUrl = `./afl_coaches_database.json`;
+
+                const [playerRes, coachRes] = await Promise.all([
+                    fetch(dataUrl).then(r => r.ok ? r.json() : []),
+                    fetch(coachUrl).then(r => r.ok ? r.json() : [])
+                ]);
+
+                const rawPlayers = playerRes.filter(p => p.Team?.toLowerCase() === currentTeam.toLowerCase());
+                const rawCoaches = coachRes.filter(c => c.Team_Slug?.toLowerCase() === currentTeam.toLowerCase() && c.decade === currentEra);
+
+                const aggregatedPlayers = computeDecadeAverages(rawPlayers);
+                const aggregatedCoaches = computeCoachRatings(rawCoaches);
+
+                renderDraftPool(aggregatedPlayers, aggregatedCoaches);
+
+            } catch (err) {
+                console.error("Data error:", err);
+                document.getElementById("player-pool-container").innerHTML = `<p class="text-red-400">Failed parsing files. Verify local json mapping routes.</p>`;
+            }
+        }
+
+        function computeDecadeAverages(playerArray) {
+            const playerMap = {};
+
+            playerArray.forEach(row => {
+                const name = row.Player;
+                if (!playerMap[name]) {
+                    playerMap[name] = { name: name, seasonsCount: 0, mk: 0, di: 0, gl: 0, bh: 0, ho: 0, tk: 0, br: 0 };
+                }
+                playerMap[name].seasonsCount += 1;
+                playerMap[name].mk += Number(row.MK || 0);
+                playerMap[name].di += Number(row.DI || 0);
+                playerMap[name].gl += Number(row.GL || 0);
+                playerMap[name].bh += Number(row.BH || 0);
+                playerMap[name].ho += Number(row.HO || 0);
+                playerMap[name].tk += Number(row.TK || 0);
+                playerMap[name].br += Number(row.BR || 0);
+            });
+
+            return Object.values(playerMap).map(p => {
+                const gamesPerSeasonAvg = STANDARD_SEASON_GAMES;
+                return {
+                    name: p.name,
+                    isCoach: false,
+                    stats: {
+                        // Per-game divisions rounded cleanly
+                        GlsPerGame: (p.gl / p.seasonsCount / gamesPerSeasonAvg).toFixed(1),
+                        BhsPerGame: (p.bh / p.seasonsCount / gamesPerSeasonAvg).toFixed(1),
+                        Dis: Math.round(p.di / p.seasonsCount / gamesPerSeasonAvg),
+                        Mks: Math.round(p.mk / p.seasonsCount / gamesPerSeasonAvg),
+                        Tks: Math.round(p.tk / p.seasonsCount / gamesPerSeasonAvg),
+                        HOs: Math.round(p.ho / p.seasonsCount / gamesPerSeasonAvg),
+                        Votes: (p.br / p.seasonsCount).toFixed(1) // Keep brownlow tallies seasonal
+                    }
+                };
+            });
+        }
+
+        // Custom Algorithm weighting historical coach win/loss metrics and finals success
+        function computeCoachRatings(coachArray) {
+            return coachArray.map(c => {
+                const wins = Number(c.Total_W || 0);
+                const losses = Number(c.Total_L || 0);
+                const draws = Number(c.Total_D || 0);
+                const totalGames = wins + losses + draws;
+                
+                let winPct = totalGames > 0 ? (wins / totalGames) * 100 : Number(c.Total_Pct || 0);
+                let premiershipBonus = Number(c.PR || 0) * 8; 
+                let gfBonus = Number(c.GF || 0) * 3;
+
+                // Dynamic baseline calculation clamped down to custom 99 video game rating cap
+                let ratingCalculated = Math.round((winPct * 0.85) + premiershipBonus + gfBonus);
+                let finalizedRating = Math.max(60, Math.min(99, ratingCalculated));
+
+                return {
+                    name: c.Coach,
+                    isCoach: true,
+                    rating: finalizedRating,
+                    summary: `${wins}W-${losses}L (${winPct.toFixed(0)}% Win Rate)`
+                };
+            });
+        }
+
+        function renderDraftPool(players, coaches) {
+            const container = document.getElementById("player-pool-container");
+            container.innerHTML = "";
+
+            if (players.length === 0 && coaches.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 italic text-center py-4">No assets found for ${currentTeam} in ${currentEra}.</p>`;
+                toggleActionButtons(true);
+                return;
+            }
+
+            const appendAssetUI = (asset) => {
+                const card = document.createElement("div");
+                card.className = "p-3 bg-gray-900 border border-gray-700 rounded-lg hover:border-yellow-500 cursor-pointer transition flex justify-between items-center group shadow-sm";
+                card.onclick = () => selectAssetCard(asset, card);
+
+                const metaBlock = `
+                    <div>
+                        <h4 class="font-bold text-gray-100 group-hover:text-yellow-400">${asset.name}</h4>
+                        <span class="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded ${asset.isCoach ? 'bg-purple-900 text-purple-200' : 'bg-gray-800 text-gray-400'}">${asset.isCoach ? 'COACH' : 'PLAYER'}</span>
+                    </div>
+                `;
+
+                let statsBlock = "";
+                if (gameMode === 'classic') {
+                    if (!asset.isCoach) {
+                        statsBlock = `
+                            <div class="grid grid-cols-3 gap-x-3 gap-y-0.5 text-[10px] text-right text-gray-400">
+                                <div class="col-span-3 text-yellow-400 font-semibold">G/B: <span>${asset.stats.GlsPerGame}.${asset.stats.BhsPerGame}</span></div>
+                                <div>D: <span class="text-white">${asset.stats.Dis}</span></div>
+                                <div>M: <span class="text-white">${asset.stats.Mks}</span></div>
+                                <div>T: <span class="text-white">${asset.stats.Tks}</span></div>
+                                <div>H: <span class="text-white">${asset.stats.HOs}</span></div>
+                                <div>BR: <span class="text-white">${asset.stats.Votes}</span></div>
+                            </div>
+                        `;
+                    } else {
+                        statsBlock = `
+                            <div class="text-right">
+                                <div class="text-sm font-black text-purple-400">OVR: ${asset.rating}</div>
+                                <div class="text-[9px] text-gray-500">${asset.summary}</div>
+                            </div>
+                        `;
+                    }
+                }
+
+                card.innerHTML = metaBlock + statsBlock;
+                container.appendChild(card);
+            };
+
+            coaches.forEach(c => appendAssetUI(c));
+            players.forEach(p => appendAssetUI(p));
+        }
+
+        function selectAssetCard(asset, element) {
+            selectedPlayerAsset = asset;
+            Array.from(element.parentNode.children).forEach(child => child.classList.remove('border-yellow-500', 'bg-yellow-950/20'));
+            element.classList.add('border-yellow-500', 'bg-yellow-950/20');
+            
+            document.getElementById("selection-status-bar").innerText = `Selected: ${asset.name}. Tap their tactical node target on the oval layout.`;
+            document.getElementById("selection-status-bar").className = "w-full bg-yellow-950/40 border border-yellow-900/60 rounded-lg p-3 text-center text-sm text-yellow-300 font-medium";
+        }
+
+        function assignToPosition(pos) {
+            if (!selectedPlayerAsset) {
+                alert("Please click a card asset from the signing pool first!");
+                return;
+            }
+            if (pos === 'Coach' && !selectedPlayerAsset.isCoach) {
+                alert("Only official Coach cards can fill the Coaching slot.");
+                return;
+            }
+            if (pos !== 'Coach' && selectedPlayerAsset.isCoach) {
+                alert("Coaching staff cannot step onto field nodes.");
+                return;
+            }
+
+            lineUpState[pos] = selectedPlayerAsset;
+
+            // Clean string formatting for player surname initials mapping
+            const cleanName = selectedPlayerAsset.name.includes(",") ? selectedPlayerAsset.name.split(",")[0].trim() : selectedPlayerAsset.name;
+            const initials = cleanName.substring(0, 3).toUpperCase();
+
+            const targetNode = document.getElementById(`pos-${pos}`);
+            targetNode.classList.add('active');
+            targetNode.querySelector('span').innerText = initials;
+            targetNode.querySelector('small').innerText = currentEra;
+
+            selectedPlayerAsset = null;
+            document.getElementById("player-pool-container").innerHTML = `<p class="italic text-gray-500">Locked. Spin the wheels for your next draft choices.</p>`;
+            document.getElementById("selection-status-bar").innerText = "Locked! Spin the engine for your next target choices.";
+            document.getElementById("selection-status-bar").className = "w-full bg-blue-950/40 border border-blue-900/60 rounded-lg p-3 text-center text-sm text-blue-300 font-medium";
+            
+            updateRoundTracker();
+            toggleActionButtons(true);
+        }
+    </script>
+</body>
+</html>
